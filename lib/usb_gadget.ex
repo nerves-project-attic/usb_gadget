@@ -42,7 +42,6 @@ defmodule USBGadget do
   """
   def create_device(device_name, attrs \\ %{}) do
     set_attribute(@gadget_root, {device_name, attrs})
-    :ok
   end
 
   @doc """
@@ -66,8 +65,6 @@ defmodule USBGadget do
     [@gadget_root, device_name, "functions"]
     |> Path.join()
     |> set_attribute({function_name, attrs})
-
-    :ok
   end
 
   @doc """
@@ -90,8 +87,6 @@ defmodule USBGadget do
     [@gadget_root, device_name, "configs"]
     |> Path.join()
     |> set_attribute({config_name, attrs})
-
-    :ok
   end
 
   @doc """
@@ -106,12 +101,10 @@ defmodule USBGadget do
     function_root = Path.join([@gadget_root, device_name, "functions"])
     config_path = Path.join([@gadget_root, device_name, "configs", config_name])
 
-    Enum.each(function_names, fn function_name ->
+    coalesce_error(function_names, fn function_name ->
       Logger.debug("Linking function #{function_name} > #{config_path}")
-      File.ln_s!(Path.join(function_root, function_name), Path.join(config_path, function_name))
+      File.ln_s(Path.join(function_root, function_name), Path.join(config_path, function_name))
     end)
-
-    :ok
   end
 
   @doc """
@@ -126,8 +119,7 @@ defmodule USBGadget do
     Logger.debug("Linking os_desc #{device_name} > #{config_name}")
     config_path = Path.join([@gadget_root, device_name, "configs", config_name])
     os_desc_path = Path.join([@gadget_root, device_name, "os_desc", config_name])
-    File.ln_s!(config_path, os_desc_path)
-    :ok
+    File.ln_s(config_path, os_desc_path)
   end
 
   @doc """
@@ -139,11 +131,10 @@ defmodule USBGadget do
       :ok
   """
   def enable_device(device_name) do
-    [udc_name | _] = File.ls!("/sys/class/udc")
-    device_path = udc_path(device_name)
-    Logger.debug("Enabling device #{udc_name} > #{device_path}")
-    File.write!(device_path, udc_name)
-    :ok
+    Logger.debug("Enabling device #{device_name}")
+
+    with {:ok, [udc_name | _]} <- File.ls("/sys/class/udc"),
+         do: File.write(udc_path(device_name), udc_name)
   end
 
   @doc """
@@ -159,26 +150,33 @@ defmodule USBGadget do
 
     device_name
     |> udc_path()
-    |> File.write!("")
-
-    :ok
+    |> File.write("")
   end
 
   # Private Helpers
 
+  defp coalesce_error(enum, func) do
+    Enum.reduce_while(enum, :ok, fn value, acc ->
+      case func.(value) do
+        :ok -> {:cont, acc}
+        error -> {:halt, error}
+      end
+    end)
+  end
+
   defp set_attribute(path, {name, %{} = values}) do
     attr_path = Path.join(path, name)
-    File.mkdir_p!(attr_path)
-    Enum.each(values, &set_attribute(attr_path, &1))
+
+    with :ok <- File.mkdir_p(attr_path),
+         do: coalesce_error(values, &set_attribute(attr_path, &1))
   end
 
   defp set_attribute(path, {name, value}) do
     Logger.debug("Setting attribute #{path}/#{name} => #{to_string(value)}")
 
-    :ok =
-      path
-      |> Path.join(name)
-      |> File.write(to_string(value))
+    path
+    |> Path.join(name)
+    |> File.write(to_string(value))
   end
 
   defp udc_path(device_name), do: Path.join([@gadget_root, device_name, "UDC"])
