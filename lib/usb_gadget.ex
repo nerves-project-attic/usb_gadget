@@ -1,11 +1,11 @@
 defmodule USBGadget do
   @moduledoc """
   Some good documentation about ConfigFS can be found here:
-  * <http://events.linuxfoundation.org/sites/events/files/slides/USB%20Gadget%20Configfs%20API_0.pdf>
+  * <https://elinux.org/images/e/ef/USB_Gadget_Configfs_API_0.pdf>
   * <https://www.kernel.org/doc/Documentation/usb/gadget_configfs.txt>
   * <https://www.kernel.org/doc/Documentation/filesystems/configfs/configfs.txt>
   * <https://docs.microsoft.com/en-us/windows-hardware/drivers/usbcon/usb-interface-association-descriptor>
-  * <http://www.usb.org/developers/docs/whitepapers/iadclasscode_r10.pdf>
+  * <https://www.usb.org/sites/default/files/iadclasscode_r10.pdf>
   """
 
   require Logger
