@@ -150,7 +150,7 @@ defmodule USBGadget do
 
     device_name
     |> udc_path()
-    |> File.write("")
+    |> File.write("\n")
   end
 
   # Private Helpers
